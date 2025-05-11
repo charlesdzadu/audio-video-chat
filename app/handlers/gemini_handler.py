@@ -7,7 +7,7 @@ import websockets
 from fastrtc import AsyncAudioVideoStreamHandler, wait_for_item
 from google import genai
 
-from ..utils.medias import encode_audio, encode_image
+from utils.medias import encode_audio, encode_image
 
 load_dotenv()
 

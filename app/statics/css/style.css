@@ -1,0 +1,19 @@
+#video-source {max-width: 600px !important; max-height: 600px !important; margin: 0 auto;}
+.stream-control-buttons {
+    display: flex;
+    gap: 10px; /* Spacing between buttons */
+    margin-bottom: 15px; /* Space below the button group */
+    justify-content: center; /* Center buttons horizontally */
+    align-items: center; /* Align items vertically */
+    padding: 10px;
+}
+.stream-control-buttons button { /* Style the buttons */
+    padding: 10px 15px;
+    border: 1px solid #000;
+    border-radius: 5px;
+    background-color: #000;
+    color: #fff;
+    cursor: pointer;
+    font-size: 1em;
+}
+

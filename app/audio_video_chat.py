@@ -1,4 +1,5 @@
 import os
+import sys
 
 
 import gradio as gr
@@ -11,20 +12,23 @@ from fastrtc import (
 )
 from gradio.utils import get_space
 
-from .handlers.gemini_handler import GeminiHandler
+from handlers.gemini_handler import GeminiHandler
 
 load_dotenv()
 
 
+# Get the absolute path to the statics directory
+current_dir = os.path.dirname(os.path.abspath(__file__))
+statics_dir = os.path.join(current_dir, "statics")
 
-gemini_api_key = os.getenv("GEMINI_API_KEY")
+# Add custom JavaScript for screen sharing
+screen_share_js = open(os.path.join(statics_dir, "js", "share_screen.js")).read()
+custom_js_injection = f"<script>{screen_share_js}</script>"
 
-
+css = open(os.path.join(statics_dir, "css", "style.css")).read()
 
 stream = Stream(
-    handler=GeminiHandler(
-        api_key=gemini_api_key,
-    ),
+    handler=GeminiHandler(),
     modality="audio-video",
     mode="send-receive",
     rtc_configuration=get_cloudflare_turn_credentials_async,
@@ -40,11 +44,9 @@ stream = Stream(
     },
 )
 
-css = """
-#video-source {max-width: 600px !important; max-height: 600 !important;}
-"""
 
-with gr.Blocks(css=css) as demo:
+
+with gr.Blocks(css=css, head=custom_js_injection) as demo:
     gr.HTML(
         """
     <div style='display: flex; align-items: center; justify-content: center; gap: 20px'>
@@ -59,10 +61,16 @@ with gr.Blocks(css=css) as demo:
     </div>
     """
     )
+    
+    # Add controls for screen sharing
+    with gr.Row(elem_classes="stream-control-buttons"):
+        screen_share_button = gr.Button("Share Screen", elem_id="screen-share-button")
+        camera_button = gr.Button("Switch to Camera", elem_id="camera-button")
+    
     with gr.Row() as row:
         with gr.Column():
             webrtc = WebRTC(
-                label="Video Chat",
+                label="Video Chat 1",
                 modality="audio-video",
                 mode="send-receive",
                 elem_id="video-source",
@@ -73,24 +81,29 @@ with gr.Blocks(css=css) as demo:
             )
         with gr.Column():
             image_input = gr.Image(
-                label="Image", type="numpy", sources=["upload", "clipboard"]
+                label="Image", type="numpy", sources=["upload", "clipboard", "webcam"]
             )
-
-        webrtc.stream(
-            GeminiHandler(),
-            inputs=[webrtc, image_input],
-            outputs=[webrtc],
-            time_limit=180 if get_space() else None,
-            concurrency_limit=2 if get_space() else None,
-        )
+            
+    
+    screen_share_button.click(fn=None, js="startScreenShareGlobal")
+    camera_button.click(fn=None, js="switchToCameraGlobal")
+    
+    webrtc.stream(
+        GeminiHandler(),
+        inputs=[webrtc, image_input],
+        outputs=[webrtc],
+        time_limit=180 if get_space() else None,
+        concurrency_limit=2 if get_space() else None,
+    )
 
 stream.ui = demo
 
 
 if __name__ == "__main__":
+    share = False
+    if "--share" in sys.argv:
+        share = True
     if (mode := os.getenv("MODE")) == "UI":
-        stream.ui.launch(server_port=7860)
-    elif mode == "PHONE":
-        raise ValueError("Phone mode not supported for this demo")
+        stream.ui.launch(server_port=7860, share=share)
     else:
-        stream.ui.launch(server_port=7860)
+        stream.ui.launch(server_port=7860, share=share)
